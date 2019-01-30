@@ -17,7 +17,7 @@ type Candidate struct {
 	Dict         string    // Name of the used dictionary
 	HistPatterns []Pattern // List of historical patterns
 	OCRPatterns  []Pattern // List of OCR error patterns
-	Distance     int       // Levenshtein distance (matches len(OCRPatterns)
+	Distance     int       // Levenshtein distance (matches len(OCRPatterns))
 	Weight       float32   // The vote weight of the candidate
 }
 
