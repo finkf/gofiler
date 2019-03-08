@@ -74,15 +74,15 @@ type Token struct {
 
 // String implements the io.Stringer interface.  The output is
 // suitable as direct input for the profiler, i.e each lexicon entry
-// start with `#` all other tokens contain exactly on `/` to seperate
+// start with `#` all other tokens contain exactly on `:` to seperate
 // the ocr token from the correction token. Tokens with no correction
-// still end with `/` (they contain an empty correction string.
+// still must end with `:` (they contain an empty correction string).
 func (t Token) String() string {
 	if len(t.LE) > 0 {
 		return fmt.Sprintf("#%s", t.LE)
 	}
 	if len(t.COR) > 0 {
-		return fmt.Sprintf("%s/%s", t.OCR, t.COR)
+		return fmt.Sprintf("%s:%s", t.OCR, t.COR)
 	}
 	return t.OCR
 }
