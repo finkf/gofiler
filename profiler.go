@@ -81,10 +81,7 @@ func (t Token) String() string {
 	if len(t.LE) > 0 {
 		return fmt.Sprintf("#%s", t.LE)
 	}
-	if len(t.COR) > 0 {
-		return fmt.Sprintf("%s:%s", t.OCR, t.COR)
-	}
-	return t.OCR
+	return fmt.Sprintf("%s:%s", t.OCR, t.COR)
 }
 
 // Logger defines a simple interface for the stderr logger of the
@@ -102,8 +99,7 @@ func Run(ctx context.Context, exe, config string, tokens []Token, l Logger) (Pro
 		config,
 		"--types",
 		"--sourceFormat",
-		//		"TOKENS",
-		"TXT",
+		"EXT",
 		"--sourceFile",
 		"/dev/stdin",
 		"--jsonOutput",
@@ -147,20 +143,7 @@ func (l *logwriter) Write(p []byte) (int, error) {
 func writeTokens(tokens []Token) (*bytes.Buffer, error) {
 	w := tokenwriter{b: &bytes.Buffer{}}
 	for i := 0; i < len(tokens) && w.err == nil; i++ {
-		if len(tokens[i].LE) > 0 {
-			w.writeByte('#')
-			w.writeString(tokens[i].LE)
-			w.writeByte('\n')
-			continue
-		}
-		if len(tokens[i].COR) > 0 {
-			w.writeString(tokens[i].OCR)
-			w.writeByte('/')
-			w.writeString(tokens[i].COR)
-			w.writeByte('\n')
-			continue
-		}
-		w.writeString(tokens[i].OCR)
+		w.writeString(tokens[i].String())
 		w.writeByte('\n')
 	}
 	return w.b, w.err
