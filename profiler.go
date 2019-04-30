@@ -34,7 +34,7 @@ func FindLanguage(backend, language string) (LanguageConfiguration, error) {
 }
 
 // LanguageConfiguration represents a pair that consists of a language
-// name and the according config paht in the backend directory.
+// name and the according config path in the backend directory.
 type LanguageConfiguration struct {
 	Language, Path string
 }
