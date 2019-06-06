@@ -7,6 +7,7 @@ type Profile map[string]Interpretation
 // Interpretation holds different candiates for unkown OCR tokens.
 type Interpretation struct {
 	OCR        string
+	N          int
 	Candidates []Candidate
 }
 
