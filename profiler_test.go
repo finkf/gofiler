@@ -66,18 +66,20 @@ var tokens = []Token{
 }
 
 func TestRunWithLogger(t *testing.T) {
-	l := newTestLogger()
-	_, err := Run(context.Background(), "testdata/run_profiler.bash", "", tokens, l)
+	p := Profiler{Exe: "testdata/run_profiler.bash", Log: newTestLogger()}
+	_, err := p.Run(context.Background(), "", tokens)
 	if err != nil {
 		t.Fatalf("got error: %v", err)
 	}
+	l := p.Log.(*testLogger)
 	if l.got != l.want {
 		t.Fatalf("expected %q got %q", l.got, l.want)
 	}
 }
 
 func TestRunNoLogger(t *testing.T) {
-	_, err := Run(context.Background(), "testdata/run_profiler.bash", "", tokens, nil)
+	p := Profiler{Exe: "testdata/run_profiler.bash"}
+	_, err := p.Run(context.Background(), "", tokens)
 	if err != nil {
 		t.Fatalf("got error: %v", err)
 	}
@@ -86,7 +88,8 @@ func TestRunNoLogger(t *testing.T) {
 func TestRunTimeOut(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
-	_, err := Run(ctx, "testdata/run_profiler_block.bash", "", tokens, nil)
+	p := Profiler{Exe: "testdata/run_profiler_block.bash"}
+	_, err := p.Run(ctx, "", tokens)
 	if err == nil {
 		t.Fatalf("expected an error")
 	}

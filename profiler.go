@@ -90,15 +90,21 @@ type Logger interface {
 	Log(string)
 }
 
+// Profiler is a profiler executable with an optional logger and some
+// minor options.
+type Profiler struct {
+	Exe             string
+	Log             Logger
+	Types, Adaptive bool
+}
+
 // Run profiles a list of tokens. It uses the given executable with
 // the given language configuration. The optional logger is used to
 // write the process's stderr.
-func Run(ctx context.Context, exe, config string, tokens []Token, l Logger) (Profile, error) {
+func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Profile, error) {
 	args := []string{
 		"--config",
 		config,
-		"--types",
-		"--adaptive",
 		"--sourceFormat",
 		"EXT",
 		"--sourceFile",
@@ -106,16 +112,23 @@ func Run(ctx context.Context, exe, config string, tokens []Token, l Logger) (Pro
 		"--jsonOutput",
 		"/dev/stdout",
 	}
+	if p.Types {
+		args = append(args, "--types")
+	}
+	if p.Adaptive {
+		args = append(args, "--adaptive")
+	}
 	w, err := writeTokens(tokens)
 	if err != nil {
 		return nil, fmt.Errorf("cannot write tokens: %v", err)
 	}
+
 	var stdout bytes.Buffer
-	cmd := exec.CommandContext(ctx, exe, args...)
+	cmd := exec.CommandContext(ctx, p.Exe, args...)
 	cmd.Stdin = w
 	cmd.Stdout = &stdout
-	if l != nil {
-		cmd.Stderr = &logwriter{logger: l}
+	if p.Log != nil {
+		cmd.Stderr = &logwriter{logger: p.Log}
 	}
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("cannot profile tokens: %v", err)
