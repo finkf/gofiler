@@ -98,6 +98,7 @@ func Run(ctx context.Context, exe, config string, tokens []Token, l Logger) (Pro
 		"--config",
 		config,
 		"--types",
+		"--adaptive",
 		"--sourceFormat",
 		"EXT",
 		"--sourceFile",
