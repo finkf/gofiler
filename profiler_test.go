@@ -40,8 +40,9 @@ func TestFindLanguage(t *testing.T) {
 }
 
 type testLogger struct {
-	got  string
-	want string
+	got   string
+	want  string
+	first bool
 }
 
 func newTestLogger() *testLogger {
@@ -53,6 +54,10 @@ func newTestLogger() *testLogger {
 }
 
 func (l *testLogger) Log(str string) {
+	if !l.first {
+		l.first = true
+		return
+	}
 	l.got += str + ";"
 }
 
@@ -73,7 +78,7 @@ func TestRunWithLogger(t *testing.T) {
 	}
 	l := p.Log.(*testLogger)
 	if l.got != l.want {
-		t.Fatalf("expected %q got %q", l.got, l.want)
+		t.Fatalf("expected %q got %q", l.want, l.got)
 	}
 }
 
