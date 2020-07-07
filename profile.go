@@ -4,7 +4,9 @@ package gofiler
 // according interpreations of the profiler.
 type Profile map[string]Interpretation
 
-// Interpretation holds different candiates for unkown OCR tokens.
+// Interpretation holds the list of candiates for OCR tokens.  In the
+// case of lexicon entries, an interpretation holds only one candidate
+// with empty historical and and ocr pattern list.
 type Interpretation struct {
 	OCR        string
 	N          int
@@ -23,10 +25,10 @@ type Candidate struct {
 }
 
 // Pattern represents error patterns in strings.  Left represents the
-// true pattern, Right the actuall pattern in the string at position
+// `true` pattern, Right the actuall pattern in the string at position
 // Pos.
 type Pattern struct {
-	Left  string
-	Right string
-	Pos   int
+	Left  string // Left part of the pattern
+	Right string // Right part of the pattern
+	Pos   int    // Position
 }
