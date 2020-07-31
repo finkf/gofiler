@@ -48,3 +48,38 @@ func TestReadProfileFromJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestPatternString(t *testing.T) {
+	for _, tc := range []struct {
+		p    Pattern
+		want string
+	}{
+		{Pattern{"a", "b", 1}, "(a:b,1)"},
+	} {
+		t.Run(tc.want, func(t *testing.T) {
+			if got := tc.p.String(); got != tc.want {
+				t.Fatalf("expected %s; got %s", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestCandidateString(t *testing.T) {
+	for _, tc := range []struct {
+		c    Candidate
+		want string
+	}{
+		{
+			Candidate{"sug", "modern", "dict",
+				[]Pattern{{"a", "b", 1}},
+				[]Pattern{{"c", "d", 3}}, 2, 1e-4},
+			"sug:{modern+[(a:b,1)]}+ocr[(c:d,3)],voteWeight=1.000000e-04,levDistance=2,dict=dict",
+		},
+	} {
+		t.Run(tc.want, func(t *testing.T) {
+			if got := tc.c.String(); got != tc.want {
+				t.Fatalf("expected %s; got %s", tc.want, got)
+			}
+		})
+	}
+}
