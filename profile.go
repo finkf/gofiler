@@ -53,8 +53,8 @@ func ps2str(ps []Pattern) string {
 }
 
 // Pattern represents error patterns in strings.  Left represents the
-// `true` pattern, Right the actuall pattern in the string at position
-// Pos.
+// `true` pattern(either the error correction or the modern form) and
+// Right the actuall pattern in the string at position Pos.
 type Pattern struct {
 	Left  string  // Left part of the pattern
 	Right string  // Right part of the pattern
