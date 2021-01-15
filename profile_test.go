@@ -83,3 +83,33 @@ func TestCandidateString(t *testing.T) {
 		})
 	}
 }
+
+func TestGlobalPatterns(t *testing.T) {
+	tests := []struct {
+		pat  string
+		want float64
+		ocr  bool
+	}{
+		{"u:v", 0.1, true},
+		{"v:f", 0.2, true},
+		{"un:vn", 0.3, false},
+		{"u:û", 0.4, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.pat, func(t *testing.T) {
+			withOpenProfile(func(in io.Reader) {
+				profile := make(Profile)
+				if err := json.NewDecoder(in).Decode(&profile); err != nil {
+					t.Fatalf("got error: %v", err)
+				}
+				got := profile.GlobalHistPatterns()[tc.pat]
+				if tc.ocr {
+					got = profile.GlobalOCRPatterns()[tc.pat]
+				}
+				if got != tc.want {
+					t.Fatalf("expected %f; got %f", got, tc.want)
+				}
+			})
+		})
+	}
+}

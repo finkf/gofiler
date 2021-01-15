@@ -9,6 +9,34 @@ import (
 // according interpreations of the profiler.
 type Profile map[string]Interpretation
 
+// GlobalHistPatterns returns all global historical patterns with
+// their according probabilities.
+func (p Profile) GlobalHistPatterns() map[string]float64 {
+	ret := make(map[string]float64)
+	for _, i := range p {
+		for _, c := range i.Candidates {
+			for _, p := range c.HistPatterns {
+				ret[p.Left+":"+p.Right] = p.Prob
+			}
+		}
+	}
+	return ret
+}
+
+// GlobalOCRPatterns returns all global ocr error patterns with their
+// according probabilities.
+func (p Profile) GlobalOCRPatterns() map[string]float64 {
+	ret := make(map[string]float64)
+	for _, i := range p {
+		for _, c := range i.Candidates {
+			for _, p := range c.OCRPatterns {
+				ret[p.Left+":"+p.Right] = p.Prob
+			}
+		}
+	}
+	return ret
+}
+
 // Interpretation holds the list of candiates for OCR tokens.  In the
 // case of lexicon entries, an interpretation holds only one candidate
 // with empty historical and and ocr pattern list.
