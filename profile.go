@@ -56,9 +56,10 @@ func ps2str(ps []Pattern) string {
 // `true` pattern, Right the actuall pattern in the string at position
 // Pos.
 type Pattern struct {
-	Left  string // Left part of the pattern
-	Right string // Right part of the pattern
-	Pos   int    // Position
+	Left  string  // Left part of the pattern
+	Right string  // Right part of the pattern
+	Prob  float64 // Global probability of the pattern
+	Pos   int     // Position
 }
 
 func (p Pattern) String() string {
