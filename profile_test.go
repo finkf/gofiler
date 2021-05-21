@@ -73,7 +73,7 @@ func TestCandidateString(t *testing.T) {
 			Candidate{"sug", "modern", "dict",
 				[]Pattern{{"a", "b", 0.0, 1}},
 				[]Pattern{{"c", "d", 0.0, 3}}, 2, 1e-4},
-			"sug:{modern+[(a:b,1)]}+ocr[(c:d,3)],voteWeight=1.000000e-04,levDistance=2,dict=dict",
+			"sug:{modern+[(a:b,1)]}+ocr[(c:d,3)],voteWeight=0.0001,levDistance=2,dict=dict",
 		},
 	} {
 		t.Run(tc.want, func(t *testing.T) {

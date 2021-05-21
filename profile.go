@@ -59,7 +59,7 @@ type Candidate struct {
 
 func (c Candidate) String() string {
 	return fmt.Sprintf(
-		"%s:{%s+%s}+ocr%s,voteWeight=%e,levDistance=%d,dict=%s",
+		"%s:{%s+%s}+ocr%s,voteWeight=%g,levDistance=%d,dict=%s",
 		c.Suggestion,
 		c.Modern,
 		ps2str(c.HistPatterns),
