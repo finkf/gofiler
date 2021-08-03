@@ -128,7 +128,7 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 	cmd.Stdin = w
 	cmd.Stdout = &stdout
 	if p.Log != nil {
-		p.Log.Log("cmd: " + strings.Join(append([]string{p.Exe}, args...), " "))
+		p.Log.Log(fmt.Sprintf("cmd: %s", strings.Join(append([]string{p.Exe}, args...), " ")))
 		cmd.Stderr = &logwriter{logger: p.Log}
 	}
 	if err := cmd.Run(); err != nil {
