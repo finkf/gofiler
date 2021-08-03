@@ -114,6 +114,14 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 		"--jsonOutput",
 		"/dev/stdout",
 	}
+	var profile Profile
+	err := p.run(ctx, config, tokens, args, func(r io.Reader) error {
+		return json.NewDecoder(r).Decode(&profile)
+	})
+	return profile, err
+}
+
+func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args []string, f func(io.Reader) error) error {
 	if p.Types {
 		args = append(args, "--types")
 	}
@@ -122,7 +130,7 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 	}
 	w, err := writeTokens(tokens)
 	if err != nil {
-		return nil, fmt.Errorf("cannot write tokens: %v", err)
+		return fmt.Errorf("cannot write tokens: %v", err)
 	}
 
 	pr, pw := io.Pipe()
@@ -133,7 +141,6 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 		p.Log.Log(fmt.Sprintf("cmd: %s", strings.Join(append([]string{p.Exe}, args...), " ")))
 		cmd.Stderr = &logwriter{logger: p.Log}
 	}
-	var profile Profile
 	var wg sync.WaitGroup
 	var perr error
 	wg.Add(1)
@@ -141,16 +148,16 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 		defer wg.Done()
 		defer pr.Close()
 		defer pw.Close()
-		perr = json.NewDecoder(pr).Decode(&profile)
+		perr = f(pr)
 	}()
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("cannot profile tokens: %v", err)
+		return fmt.Errorf("cannot profile tokens: %v", err)
 	}
 	wg.Wait()
 	if perr != nil {
-		return nil, fmt.Errorf("cannot read profile: %v", err)
+		return fmt.Errorf("cannot read profile: %v", err)
 	}
-	return profile, nil
+	return nil
 }
 
 type logwriter struct {
@@ -168,33 +175,14 @@ func (l *logwriter) Write(p []byte) (int, error) {
 }
 
 func writeTokens(tokens []Token) (*bytes.Buffer, error) {
-	w := tokenwriter{b: &bytes.Buffer{}}
-	for i := 0; i < len(tokens) && w.err == nil; i++ {
-		w.writeString(tokens[i].String())
-		w.writeByte('\n')
+	var b bytes.Buffer
+	for i := range tokens {
+		if _, err := b.WriteString(tokens[i].String()); err != nil {
+			return nil, err
+		}
+		if err := b.WriteByte('\n'); err != nil {
+			return nil, err
+		}
 	}
-	return w.b, w.err
-}
-
-type tokenwriter struct {
-	err error
-	b   *bytes.Buffer
-}
-
-func (w *tokenwriter) writeByte(b byte) {
-	if w.err != nil {
-		return
-	}
-	if err := w.b.WriteByte(b); err != nil {
-		w.err = err
-	}
-}
-
-func (w *tokenwriter) writeString(str string) {
-	if w.err != nil {
-		return
-	}
-	if _, err := w.b.WriteString(str); err != nil {
-		w.err = err
-	}
+	return &b, nil
 }
