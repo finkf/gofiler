@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // ErrorLanguageNotFound is the error that is returned if a language
@@ -123,19 +125,29 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 		return nil, fmt.Errorf("cannot write tokens: %v", err)
 	}
 
-	var stdout bytes.Buffer
+	pr, pw := io.Pipe()
 	cmd := exec.CommandContext(ctx, p.Exe, args...)
 	cmd.Stdin = w
-	cmd.Stdout = &stdout
+	cmd.Stdout = pw
 	if p.Log != nil {
 		p.Log.Log(fmt.Sprintf("cmd: %s", strings.Join(append([]string{p.Exe}, args...), " ")))
 		cmd.Stderr = &logwriter{logger: p.Log}
 	}
+	var profile Profile
+	var wg sync.WaitGroup
+	var perr error
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer pr.Close()
+		defer pw.Close()
+		perr = json.NewDecoder(pr).Decode(&profile)
+	}()
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("cannot profile tokens: %v", err)
 	}
-	var profile Profile
-	if err := json.NewDecoder(&stdout).Decode(&profile); err != nil {
+	wg.Wait()
+	if perr != nil {
 		return nil, fmt.Errorf("cannot read profile: %v", err)
 	}
 	return profile, nil
