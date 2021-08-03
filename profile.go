@@ -72,17 +72,15 @@ func (c Candidate) String() string {
 
 func ps2str(ps []Pattern) string {
 	var b strings.Builder
-	b.WriteByte('[')
 	for _, p := range ps {
 		b.WriteString(p.String())
 	}
-	b.WriteByte(']')
 	return b.String()
 }
 
 // Pattern represents error patterns in strings.  Left represents the
 // `true` pattern(either the error correction or the modern form) and
-// Right the actuall pattern in the string at position Pos.
+// Right the actual pattern in the string at position Pos.
 type Pattern struct {
 	Left  string  // Left part of the pattern
 	Right string  // Right part of the pattern
