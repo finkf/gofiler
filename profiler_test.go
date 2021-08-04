@@ -99,3 +99,19 @@ func TestRunTimeOut(t *testing.T) {
 		t.Fatalf("expected an error")
 	}
 }
+
+func TestRunFunc(t *testing.T) {
+	ctx := context.Background()
+	p := Profiler{Exe: "testdata/run_profiler_simple_output.bash"}
+	n := 0
+	err := p.RunFunc(ctx, "", tokens, func(ocr string, cand Candidate) error {
+		n++
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+	if n != 114 {
+		t.Errorf("expected %d candidate; got %d", 114, n)
+	}
+}

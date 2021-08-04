@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
 // ErrorLanguageNotFound is the error that is returned if a language
@@ -120,6 +119,35 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 		return json.NewDecoder(r).Decode(&profile)
 	})
 	return profile, err
+}
+
+// RunFunc profiles a list of tokens. It uses the given language
+// configuration.  The optional logger is used to write the process's
+// stderr.  The callback function is called for every Profiler
+// suggestion.
+func (p *Profiler) RunFunc(ctx context.Context, config string, tokens []Token, f func(string, Candidate) error) error {
+	args := []string{
+		"--config",
+		config,
+		"--sourceFormat",
+		"EXT",
+		"--sourceFile",
+		"/dev/stdin",
+		"--simpleOutput",
+	}
+	return p.run(ctx, config, tokens, args, func(r io.Reader) error {
+		s := bufio.NewScanner(r)
+		for s.Scan() {
+			cand, ocr, err := MakeCandidate(s.Text())
+			if err != nil {
+				return err
+			}
+			if err := f(ocr, cand); err != nil {
+				return err
+			}
+		}
+		return s.Err()
+	})
 }
 
 func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args []string, f func(io.Reader) error) error {
