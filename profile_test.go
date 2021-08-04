@@ -2,6 +2,7 @@ package gofiler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -110,6 +111,38 @@ func TestGlobalPatterns(t *testing.T) {
 					t.Fatalf("expected %f; got %f", got, tc.want)
 				}
 			})
+		})
+	}
+}
+
+func TestMakePattern(t *testing.T) {
+	for _, tc := range []struct{ test string }{
+		{"(a:b,1)"},
+	} {
+		t.Run(tc.test, func(t *testing.T) {
+			p, err := MakePattern(tc.test)
+			if err != nil {
+				t.Fatalf("got error: %v", err)
+			}
+			if got := fmt.Sprintf("%s", p); got != tc.test {
+				t.Errorf("expected %s; got %s", tc.test, got)
+			}
+		})
+	}
+}
+
+func TestMakeCandidate(t *testing.T) {
+	for _, tc := range []struct{ test string }{
+		{"theyl@theil:{teil+[(t:th,0)(a:b,3)]}+ocr[(i:y,3)(x:y,4)],voteWeight=0.74,levDistance=1,dict=modern"},
+	} {
+		t.Run(tc.test, func(t *testing.T) {
+			cand, ocr, err := MakeCandidate(tc.test)
+			if err != nil {
+				t.Fatalf("got error: %v", err)
+			}
+			if got := ocr + "@" + cand.String(); got != tc.test {
+				t.Errorf("expected %s; got %s", tc.test, got)
+			}
 		})
 	}
 }
