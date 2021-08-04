@@ -1,6 +1,7 @@
 package gofiler
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -133,28 +134,18 @@ func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args 
 		return fmt.Errorf("cannot write tokens: %v", err)
 	}
 
-	pr, pw := io.Pipe()
+	var buf bytes.Buffer
 	cmd := exec.CommandContext(ctx, p.Exe, args...)
 	cmd.Stdin = w
-	cmd.Stdout = pw
+	cmd.Stdout = &buf
 	if p.Log != nil {
 		p.Log.Log(fmt.Sprintf("cmd: %s", strings.Join(append([]string{p.Exe}, args...), " ")))
 		cmd.Stderr = &logwriter{logger: p.Log}
 	}
-	var wg sync.WaitGroup
-	var perr error
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		defer pr.Close()
-		defer pw.Close()
-		perr = f(pr)
-	}()
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("cannot profile tokens: %v", err)
 	}
-	wg.Wait()
-	if perr != nil {
+	if err := f(&buf); err != nil {
 		return fmt.Errorf("cannot read profile: %v", err)
 	}
 	return nil
