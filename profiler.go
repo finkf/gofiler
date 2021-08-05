@@ -153,6 +153,25 @@ func (p *Profiler) RunFunc(ctx context.Context, config string, tokens []Token, f
 	})
 }
 
+// RunWriter profiles a list of tokens and writes the resulting
+// profile into the given writer.
+func (p *Profiler) RunWriter(ctx context.Context, config string, tokens []Token, w io.Writer) error {
+	args := []string{
+		"--config",
+		config,
+		"--sourceFormat",
+		"EXT",
+		"--sourceFile",
+		"/dev/stdin",
+		"--jsonOutput",
+		"/dev/stdout",
+	}
+	return p.run(ctx, config, tokens, args, func(r io.Reader) error {
+		_, err := io.Copy(w, r)
+		return err
+	})
+}
+
 func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args []string, f func(io.Reader) error) error {
 	if p.Types {
 		args = append(args, "--types")
@@ -180,12 +199,10 @@ func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("run profiler: %v", err)
 	}
-	//if err := writeTokens(newWriterContext(ctx, stdin), tokens); err != nil {
 	if err := writeTokens(stdin, tokens); err != nil {
 		return fmt.Errorf("run profiler: %v", err)
 	}
 	// No need to close stdout; cmd takes care of this.
-	//if err := f(newReaderContext(ctx, stdout)); err != nil {
 	if err := f(stdout); err != nil {
 		return fmt.Errorf("run profiler: %v", err)
 	}
