@@ -189,11 +189,12 @@ func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args 
 		return fmt.Errorf("cannot profile tokens: %v", err)
 	}
 	stdin.Close()
-	stdout.Close()
 	// Wait for the reader/writer go-routines to finish.
 	if err := g.Wait(); err != nil {
+		stdout.Close()
 		return fmt.Errorf("cannot read profile: %v", err)
 	}
+	stdout.Close()
 	return nil
 }
 
