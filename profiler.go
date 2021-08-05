@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // ErrorLanguageNotFound is the error that is returned if a language
@@ -157,23 +159,39 @@ func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args 
 	if p.Adaptive {
 		args = append(args, "--adaptive")
 	}
-	w, err := writeTokens(tokens)
-	if err != nil {
-		return fmt.Errorf("cannot write tokens: %v", err)
-	}
-
-	var buf bytes.Buffer
+	stdin, pw := io.Pipe()
+	pr, stdout := io.Pipe()
 	cmd := exec.CommandContext(ctx, p.Exe, args...)
-	cmd.Stdin = w
-	cmd.Stdout = &buf
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
 	if p.Log != nil {
-		p.Log.Log(fmt.Sprintf("cmd: %s", strings.Join(append([]string{p.Exe}, args...), " ")))
+		p.Log.Log(fmt.Sprintf("cmd: %s %s", p.Exe, strings.Join(args, " ")))
 		cmd.Stderr = &logwriter{logger: p.Log}
 	}
+	// Run reader/writer go-routines.
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		defer pw.Close()
+		for _, t := range tokens {
+			if _, err := fmt.Fprintf(pw, "%s\n", t); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	g.Go(func() error {
+		defer pr.Close()
+		return f(pr)
+	})
+	// Wait for the command to finish; then close the pipes
+	// to signal end of execution to the reader/writer go-routines.
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("cannot profile tokens: %v", err)
 	}
-	if err := f(&buf); err != nil {
+	stdin.Close()
+	stdout.Close()
+	// Wait for the reader/writer go-routines to finish.
+	if err := g.Wait(); err != nil {
 		return fmt.Errorf("cannot read profile: %v", err)
 	}
 	return nil
@@ -191,17 +209,4 @@ func (l *logwriter) Write(p []byte) (int, error) {
 		l.buffer = l.buffer[pos+1:]
 	}
 	return len(p), nil
-}
-
-func writeTokens(tokens []Token) (*bytes.Buffer, error) {
-	var b bytes.Buffer
-	for i := range tokens {
-		if _, err := b.WriteString(tokens[i].String()); err != nil {
-			return nil, err
-		}
-		if err := b.WriteByte('\n'); err != nil {
-			return nil, err
-		}
-	}
-	return &b, nil
 }
