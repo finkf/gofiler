@@ -1,6 +1,6 @@
 #!/bin/bash
 
+cat > /dev/null
 while true; do
-	echo "blocking"
+ 	echo "blocking"
 done
-cat testdata/profile.json

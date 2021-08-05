@@ -12,8 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"golang.org/x/sync/errgroup"
 )
 
 // ErrorLanguageNotFound is the error that is returned if a language
@@ -118,7 +116,10 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 	}
 	var profile Profile
 	err := p.run(ctx, config, tokens, args, func(r io.Reader) error {
-		return json.NewDecoder(r).Decode(&profile)
+		if err := json.NewDecoder(r).Decode(&profile); err != nil {
+			return fmt.Errorf("cannot decode profile: %v", err)
+		}
+		return nil
 	})
 	return profile, err
 }
@@ -142,10 +143,10 @@ func (p *Profiler) RunFunc(ctx context.Context, config string, tokens []Token, f
 		for s.Scan() {
 			cand, ocr, err := MakeCandidate(s.Text())
 			if err != nil {
-				return err
+				return fmt.Errorf("read candidate: %v", err)
 			}
 			if err := f(ocr, cand); err != nil {
-				return err
+				return fmt.Errorf("read candidate: %v", err)
 			}
 		}
 		return s.Err()
@@ -159,42 +160,49 @@ func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args 
 	if p.Adaptive {
 		args = append(args, "--adaptive")
 	}
-	stdin, pw := io.Pipe()
-	pr, stdout := io.Pipe()
+	// g, gctx := errgroup.WithContext(ctx)
+	// stdin, pw := io.Pipe()
+	// pr, stdout := io.Pipe()
 	cmd := exec.CommandContext(ctx, p.Exe, args...)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
 	if p.Log != nil {
 		p.Log.Log(fmt.Sprintf("cmd: %s %s", p.Exe, strings.Join(args, " ")))
 		cmd.Stderr = &logwriter{logger: p.Log}
 	}
-	// Run reader/writer go-routines.
-	g, ctx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		defer pw.Close()
-		for _, t := range tokens {
-			if _, err := fmt.Fprintf(pw, "%s\n", t); err != nil {
-				return err
-			}
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("run profiler: connect stdin: %v", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("run profiler: connect stdout: %v", err)
+	}
+	// Run profiler: write input and read output.
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("run profiler: %v", err)
+	}
+	//if err := writeTokens(newWriterContext(ctx, stdin), tokens); err != nil {
+	if err := writeTokens(stdin, tokens); err != nil {
+		return fmt.Errorf("run profiler: %v", err)
+	}
+	// No need to close stdout; cmd takes care of this.
+	//if err := f(newReaderContext(ctx, stdout)); err != nil {
+	if err := f(stdout); err != nil {
+		return fmt.Errorf("run profiler: %v", err)
+	}
+	// Wait for the command to finish.
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("run profiler: %v", err)
+	}
+	return nil
+}
+
+func writeTokens(w io.WriteCloser, ts []Token) error {
+	defer w.Close()
+	for _, t := range ts {
+		if _, err := fmt.Fprintf(w, "%s\n", t); err != nil {
+			return fmt.Errorf("write token %s: %v", t, err)
 		}
-		return nil
-	})
-	g.Go(func() error {
-		defer pr.Close()
-		return f(pr)
-	})
-	// Wait for the command to finish; then close the pipes
-	// to signal end of execution to the reader/writer go-routines.
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("cannot profile tokens: %v", err)
 	}
-	stdin.Close()
-	// Wait for the reader/writer go-routines to finish.
-	if err := g.Wait(); err != nil {
-		stdout.Close()
-		return fmt.Errorf("cannot read profile: %v", err)
-	}
-	stdout.Close()
 	return nil
 }
 
