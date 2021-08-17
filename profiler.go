@@ -80,10 +80,13 @@ type Token struct {
 // the ocr token from the correction token. Tokens with no correction
 // still must end with `:` (they contain an empty correction string).
 func (t Token) String() string {
-	if len(t.LE) > 0 {
+	if t.LE != "" {
 		return fmt.Sprintf("#%s", t.LE)
 	}
-	return fmt.Sprintf("%s:%s", t.OCR, t.COR)
+	if t.COR == "" {
+		return t.OCR
+	}
+	return fmt.Sprintf("%s %s", t.OCR, t.COR)
 }
 
 // Logger defines a simple interface for the stderr logger of the
