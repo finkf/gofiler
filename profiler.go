@@ -98,7 +98,8 @@ type Logger interface {
 // Profiler is a profiler executable with an optional logger and some
 // minor options.
 type Profiler struct {
-	Exe             string
+	args            []string
+	Exe, Config     string
 	Log             Logger
 	Types, Adaptive bool
 }
@@ -106,10 +107,10 @@ type Profiler struct {
 // Run profiles a list of tokens. It uses the given executable with
 // the given language configuration. The optional logger is used to
 // write the process's stderr.
-func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Profile, error) {
-	args := []string{
+func (p *Profiler) Run(ctx context.Context, tokens []Token) (Profile, error) {
+	p.args = []string{
 		"--config",
-		config,
+		p.Config,
 		"--sourceFormat",
 		"EXT",
 		"--sourceFile",
@@ -118,7 +119,7 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 		"/dev/stdout",
 	}
 	var profile Profile
-	err := p.run(ctx, config, tokens, args, func(r io.Reader) error {
+	err := p.run(ctx, tokens, func(r io.Reader) error {
 		if err := json.NewDecoder(r).Decode(&profile); err != nil {
 			return fmt.Errorf("cannot decode profile: %v", err)
 		}
@@ -131,17 +132,17 @@ func (p *Profiler) Run(ctx context.Context, config string, tokens []Token) (Prof
 // configuration.  The optional logger is used to write the process's
 // stderr.  The callback function is called for every Profiler
 // suggestion.
-func (p *Profiler) RunFunc(ctx context.Context, config string, tokens []Token, f func(string, Candidate) error) error {
-	args := []string{
+func (p *Profiler) RunFunc(ctx context.Context, tokens []Token, f func(string, Candidate) error) error {
+	p.args = []string{
 		"--config",
-		config,
+		p.Config,
 		"--sourceFormat",
 		"EXT",
 		"--sourceFile",
 		"/dev/stdin",
 		"--simpleOutput",
 	}
-	return p.run(ctx, config, tokens, args, func(r io.Reader) error {
+	return p.run(ctx, tokens, func(r io.Reader) error {
 		s := bufio.NewScanner(r)
 		for s.Scan() {
 			cand, ocr, err := MakeCandidate(s.Text())
@@ -158,10 +159,10 @@ func (p *Profiler) RunFunc(ctx context.Context, config string, tokens []Token, f
 
 // RunWriter profiles a list of tokens and writes the resulting
 // profile into the given writer.
-func (p *Profiler) RunWriter(ctx context.Context, config string, tokens []Token, w io.Writer) error {
-	args := []string{
+func (p *Profiler) RunWriter(ctx context.Context, tokens []Token, w io.Writer) error {
+	p.args = []string{
 		"--config",
-		config,
+		p.Config,
 		"--sourceFormat",
 		"EXT",
 		"--sourceFile",
@@ -169,25 +170,25 @@ func (p *Profiler) RunWriter(ctx context.Context, config string, tokens []Token,
 		"--jsonOutput",
 		"/dev/stdout",
 	}
-	return p.run(ctx, config, tokens, args, func(r io.Reader) error {
+	return p.run(ctx, tokens, func(r io.Reader) error {
 		_, err := io.Copy(w, r)
 		return err
 	})
 }
 
-func (p *Profiler) run(ctx context.Context, config string, tokens []Token, args []string, f func(io.Reader) error) error {
+func (p *Profiler) run(ctx context.Context, tokens []Token, f func(io.Reader) error) error {
 	if p.Types {
-		args = append(args, "--types")
+		p.args = append(p.args, "--types")
 	}
 	if p.Adaptive {
-		args = append(args, "--adaptive")
+		p.args = append(p.args, "--adaptive")
 	}
 	// g, gctx := errgroup.WithContext(ctx)
 	// stdin, pw := io.Pipe()
 	// pr, stdout := io.Pipe()
-	cmd := exec.CommandContext(ctx, p.Exe, args...)
+	cmd := exec.CommandContext(ctx, p.Exe, p.args...)
 	if p.Log != nil {
-		p.Log.Log(fmt.Sprintf("cmd: %s %s", p.Exe, strings.Join(args, " ")))
+		p.Log.Log(fmt.Sprintf("cmd: %s %s", p.Exe, strings.Join(p.args, " ")))
 		cmd.Stderr = &logwriter{logger: p.Log}
 	}
 	stdin, err := cmd.StdinPipe()
