@@ -104,9 +104,7 @@ type Profiler struct {
 	Types, Adaptive bool
 }
 
-// Run profiles a list of tokens. It uses the given executable with
-// the given language configuration. The optional logger is used to
-// write the process's stderr.
+// Run profiles a list of tokens and returns the resulting profile.
 func (p *Profiler) Run(ctx context.Context, tokens []Token) (Profile, error) {
 	p.args = []string{
 		"--config",
@@ -128,10 +126,9 @@ func (p *Profiler) Run(ctx context.Context, tokens []Token) (Profile, error) {
 	return profile, err
 }
 
-// RunFunc profiles a list of tokens. It uses the given language
-// configuration.  The optional logger is used to write the process's
-// stderr.  The callback function is called for every Profiler
-// suggestion.
+// RunFunc profiles a list of tokens.  The optional logger is used to
+// write the process's stderr.  The callback function is called for
+// every Profiler candidate with the according ocr token.
 func (p *Profiler) RunFunc(ctx context.Context, tokens []Token, f func(string, Candidate) error) error {
 	p.args = []string{
 		"--config",
@@ -158,7 +155,7 @@ func (p *Profiler) RunFunc(ctx context.Context, tokens []Token, f func(string, C
 }
 
 // RunWriter profiles a list of tokens and writes the resulting
-// profile into the given writer.
+// profile (formated as json) into the given writer.
 func (p *Profiler) RunWriter(ctx context.Context, tokens []Token, w io.Writer) error {
 	p.args = []string{
 		"--config",
